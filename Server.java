@@ -21,7 +21,7 @@ public class Server {
 				if(!socketListener.isBound())
 				System.out.println("+");
 				Socket socket = socketListener.accept();
-				new ServerThread(socket,list,users);
+				new AlternativeServerThread(socket,list,users);
 			}
 		} catch (SocketException e) {
 			System.err.println("Socket exception");
@@ -53,7 +53,7 @@ public class Server {
 				} else System.out.println("#wrong format");
 				list.writeFile();
 				if (users.containsKey(list.getUserByName(name)))
-					ServerThread.youAreAdmin(name, result);
+					AlternativeServerThread.admin(name, result);
 			} else System.out.println("#there is no such user");
 		}else if(command.startsWith("/online")){
 			Iterator<User> iterator = users.keySet().iterator();
