@@ -36,6 +36,7 @@ private Parser parser = new Parser();
 			while (true){
 				if(in.ready()){
 					String get = in.readLine();
+					System.out.println(get);
 					process(stringToXxl(get));
 				}
 			}
@@ -49,25 +50,32 @@ private Parser parser = new Parser();
 	}
 	
 	private void process(Document document){
-	Obj parsed = toParse(document);
+	Obj parsed = parser.parser(document);
 	Obj toCreate = new Obj();
+		System.out.println(parsed.getAction());
 	String action = parsed.getAction();
 	if(action.equals("login")){
-		logedIn = list.getUserByName(parsed.getName()).login(parsed.getPassword());
-		if(logedIn){
-			user = list.getUserByName(parsed.getName());
-			userSocket.put(user,socket);
-			System.out.println(userSocket);
+		if (list.getUserByName(parsed.getName())!=null) {
+			logedIn = list.getUserByName(parsed.getName()).login(parsed.getPassword());
+			if (logedIn) {
+				user = list.getUserByName(parsed.getName());
+				userSocket.put(user, socket);
+				System.out.println(userSocket);
+			}
+			//logedIn = user.login(parsed.getPassword());
+			toCreate.setAction("answer for login");
+			toCreate.setName(list.getUserByName(parsed.getName()).getName());
+			if (logedIn)
+				toCreate.setResult("true");
+			else toCreate.setResult("false");
+			sendXML(parser.create(toCreate), socket);
+			//notify all
+			if(logedIn){
+				if(user.isAdmin().equals("true")) admin(user.getName(),true);
+				else admin(user.getName(),false);
+			}
+			updOnline();
 		}
-		//logedIn = user.login(parsed.getPassword());
-		toCreate.setAction("answer for login");
-		toCreate.setName(list.getUserByName(parsed.getName()).getName());
-		if(logedIn)
-		toCreate.setResult("true");
-		else toCreate.setResult("false");
-		sendXML(parser.create(toCreate),socket);
-	//notify all
-	updOnline();
 	}
 	if(action.equals("create user")){
 		toCreate.setAction("answer for creating user");
@@ -80,7 +88,7 @@ private Parser parser = new Parser();
 			list.addUser(user);
 			list.writeFile();
 		}
-	//notify all
+	sendXML(parser.create(toCreate),socket);
 	updOnline();
 	}if(action.equals("message")&&logedIn) {
 			if (user.isBanned().equals("false")) {
@@ -89,7 +97,7 @@ private Parser parser = new Parser();
 					toCreate.setFrom(parsed.getFrom());
 					toCreate.setTo(parsed.getTo());
 					toCreate.setText(parsed.getText());
-					sendXML(parser.create(toCreate),userSocket.get(list.getUserByName(parsed.getName())));
+					sendXML(parser.create(toCreate),userSocket.get(list.getUserByName(parsed.getTo())));
 					//send to
 				}else{
 					toCreate.setAction("user banned");
@@ -109,7 +117,10 @@ private Parser parser = new Parser();
 			toCreate.setAction("chat message");
 			toCreate.setFrom(parsed.getFrom());
 			toCreate.setText(parsed.getText());
-			//send chat
+			Set<User> users = userSocket.keySet();
+			for (User user:users) {
+				if(user.isBanned().equals("false")) sendXML(parser.create(toCreate),userSocket.get(user));
+			}
 		}else {
 			sendXML(parser.create(youAreBanned(user.getName())),userSocket.get(user));
 		}
@@ -118,7 +129,7 @@ private Parser parser = new Parser();
 	if(action.equals("change name")&&logedIn){
 		if(user.isBanned().equals("false")){
 			toCreate.setAction("answer for changing");
-			if(list.getUserByName(parsed.getNewName()).equals(null)){
+			if(list.getUserByName(parsed.getNewName())==null){
 				toCreate.setResult("true");
 				toCreate.setName(parsed.getNewName());
 				user.setName(parsed.getNewName());
@@ -131,14 +142,15 @@ private Parser parser = new Parser();
 			updOnline();
 			//send to chat
 		}else{
-			//send ban
+			sendXML(parser.create(youAreBanned(user.getName())),userSocket.get(user));
 		}
 	}
 	if(action.equals("change password")&&logedIn){
 		if(user.isBanned().equals("false")){
 			toCreate.setAction("answer for changing");
 			toCreate.setName(user.getName());
-			toCreate.setNewPassword(parsed.getNewPassword());
+			toCreate.setResult("true");
+			user.setPassword(parsed.getNewPassword());
 			list.writeFile();
 			sendXML(parser.create(toCreate),userSocket.get(user));
 			//send
@@ -152,7 +164,7 @@ private Parser parser = new Parser();
 			toCreate.setAction("return online list");
 			Set<User> set = userSocket.keySet();
 			for (User user:set) {
-				toCreate.add(user.getName());
+				toCreate.add(user.getName(),user.isBanned());
 			}
 			sendXML(parser.create(toCreate),userSocket.get(user));
 		}else {
@@ -168,6 +180,15 @@ private Parser parser = new Parser();
 			list.writeFile();
 			sendXML(parser.create(toCreate),userSocket.get(user));
 			youAreBanned(parsed.getName());
+		}
+		if (action.equals("logout")){
+			try {
+				userSocket.get(user).close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			userSocket.remove(user);
+			updOnline();
 		}
 	}
 	}
@@ -190,16 +211,13 @@ public static void  sendXML(Document document, Socket socket){
 	}
 }
 
-private Obj toParse(Document document){
-		return parser.parser(document);
-	}
 public void updOnline(){
 	Obj obj = new Obj();
 	obj.setAction("return online list");
 	
 	Set<User> users = userSocket.keySet();
 	for (User user:users) {
-		obj.add(user.getName());
+		obj.add(user.getName(),user.isBanned());
 	}
 	Document document= new Parser().create(obj);
 	for (User user:users) {
@@ -207,7 +225,7 @@ public void updOnline(){
 	}
 }
 	
-	
+
 public static void admin(String name, boolean result){
 	Obj obj = new Obj();
 	if(userSocket.containsKey(list.getUserByName(name))) {

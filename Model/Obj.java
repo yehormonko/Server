@@ -16,14 +16,20 @@ public void setNewName(String newName) {
 	this.newName = newName;
 }
 
-private String newPassword;
+	private String newPassword;
 	private String result;
 	private String text;
 	private String from;
 	private String to;
 	private ArrayList<String> user = new ArrayList<>();
-public void add(String user){
+	private ArrayList<String> ban = new ArrayList<>();
+public void add(String user, String banned){
 	this.user.add(user);
+	this.ban.add(banned);
+}
+
+public ArrayList<String> getBan() {
+	return ban;
 }
 
 public ArrayList<String> getUser() {

@@ -15,6 +15,11 @@ public class Parser {
 		Element main = (Element)document.getElementsByTagName("class").item(0);
 		String action = main.getAttributeNode("event").getValue();
 		toReturn.setAction(action);
+		if(action.startsWith("answer")){
+			Element res = (Element)document.getElementsByTagName("result").item(0);
+			String result = res.getTextContent();
+			toReturn.setResult(result);
+		}
 		if(action.equals("create user")||action.equals("login")){
 			Element name = (Element)main.getElementsByTagName("name").item(0);
 			String username = name.getTextContent();
@@ -74,6 +79,14 @@ public class Parser {
 		Element main = toReturn.createElement("class");
 		main.setAttribute("event",action);
 		toReturn.appendChild(main);
+		if(action.equals("login")||action.equals("create user")){
+			Element name = toReturn.createElement("name");
+			name.setTextContent(toCreate.getName());
+			main.appendChild(name);
+			Element password = toReturn.createElement("password");
+			password.setTextContent(toCreate.getPassword());
+			main.appendChild(password);
+		}
 		if(action.equals("answer for creating user")
 				||action.equals("answer for login")
 				||action.equals("answer for changing")
@@ -111,10 +124,15 @@ public class Parser {
 			main.appendChild(name);
 		}
 		if(action.equals("return online list")){
-			for (String name:toCreate.getUser()) {
+			for (int i = 0;i<toCreate.getUser().size();i++) {
+				String name = toCreate.getUser().get(i);
+				String banR = toCreate.getBan().get(i);
 				Element nameOfUser = toReturn.createElement("name");
+				Element ban = toReturn.createElement("ban");
 				nameOfUser.setTextContent(name);
+				ban.setTextContent(banR);
 				main.appendChild(nameOfUser);
+				main.appendChild(ban);
 			}
 		}
 		if(action.equals("you are admin")||action.equals("you are not admin")){
